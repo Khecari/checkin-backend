@@ -37,16 +37,19 @@ app.use(express.static(path.join(__dirname, "public")));
 
 // ---- API: receive a check-in from the PWA
 app.post("/api/checkin", (req, res) => {
-  const { userId, name, latitude, longitude, accuracyMeters, timestamp } = req.body || {};
+  const { userId, name, type, latitude, longitude, accuracyMeters, timestamp } = req.body || {};
 
   if (!userId || latitude == null || longitude == null) {
     return res.status(400).json({ error: "userId, latitude, and longitude are required." });
   }
 
+  const normalizedType = type === "checkout" ? "checkout" : "checkin"; // default to checkin for older clients
+
   const entry = {
     id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
     userId: String(userId),
     name: name ? String(name) : "",
+    type: normalizedType,
     latitude: Number(latitude),
     longitude: Number(longitude),
     accuracyMeters: accuracyMeters != null ? Number(accuracyMeters) : null,
