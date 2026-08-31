@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Check-Ins</title>
+  <style>
+    :root {
+      --bg: #0f1220;
+      --panel: #171b2e;
+      --border: #262b45;
+      --text: #e9ebf5;
+      --dim: #9aa0bf;
+      --accent: #4f8ff7;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      padding: 24px;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    h1 { font-size: 1.3rem; margin: 0; }
+    .count { color: var(--dim); font-size: 0.9rem; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      font-size: 0.9rem;
+    }
+    th, td {
+      text-align: left;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    th {
+      color: var(--dim);
+      text-transform: uppercase;
+      font-size: 0.72rem;
+      letter-spacing: 0.04em;
+      font-weight: 600;
+    }
+    tr:last-child td { border-bottom: none; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .empty { color: var(--dim); padding: 24px; text-align: center; }
+    .refresh-note { color: var(--dim); font-size: 0.78rem; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Check-ins</h1>
+    <span class="count" id="count"></span>
+  </header>
+  <div id="table-wrap"></div>
+  <p class="refresh-note">Refreshes every 5 seconds.</p>
+
+  <script>
+    async function load() {
+      const res = await fetch("/api/checkins");
+      const rows = await res.json();
+      document.getElementById("count").textContent = rows.length + (rows.length === 1 ? " check-in" : " check-ins");
+
+      const wrap = document.getElementById("table-wrap");
+      if (rows.length === 0) {
+        wrap.innerHTML = '<p class="empty">No check-ins yet.</p>';
+        return;
+      }
+
+      const escape = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      }[c]));
+
+      const mapLink = (lat, lng) => `https://maps.google.com/?q=${lat},${lng}`;
+
+      wrap.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>User ID</th>
+              <th>Location</th>
+              <th>Accuracy</th>
+              <th>Timestamp</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map(r => `
+              <tr>
+                <td>${escape(r.name || "—")}</td>
+                <td>${escape(r.userId)}</td>
+                <td><a href="${mapLink(r.latitude, r.longitude)}" target="_blank" rel="noopener">${r.latitude.toFixed(5)}, ${r.longitude.toFixed(5)}</a></td>
+                <td>${r.accuracyMeters != null ? Math.round(r.accuracyMeters) + " m" : "—"}</td>
+                <td>${escape(new Date(r.timestamp).toLocaleString())}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      `;
+    }
+
+    load();
+    setInterval(load, 5000);
+  </script>
+</body>
+</html>
